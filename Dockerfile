@@ -12,7 +12,7 @@ RUN set -eux && cargo install --locked monolith
 #  - Nothing extra should be left here.  All commands should cleanup
 FROM node:20.19.6-bullseye-slim AS main-app
 
-ENV YARN_HTTP_TIMEOUT=10000000
+ENV COREPACK_ENABLE_DOWNLOAD_PROMPT=0
 
 ENV COREPACK_ENABLE_DOWNLOAD_PROMPT=0
 
@@ -26,19 +26,17 @@ WORKDIR /data
 
 RUN corepack enable
 
-COPY ./.yarnrc.yml ./
-
 COPY ./apps/web/package.json ./apps/web/playwright.config.ts ./apps/web/
 
 COPY ./apps/worker/package.json ./apps/worker/
 
 COPY ./packages ./packages
 
-COPY ./yarn.lock ./package.json ./
+COPY ./pnpm-lock.yaml ./package.json ./
 
-RUN --mount=type=cache,sharing=locked,target=/usr/local/share/.cache/yarn \
+RUN --mount=type=cache,target=/root/.pnpm-store \
     set -eux && \
-    yarn workspaces focus linkwarden @linkwarden/web @linkwarden/worker && \
+    pnpm install --frozen-lockfile && \
     # Install curl for healthcheck, and ca-certificates to prevent monolith from failing to retrieve resources due to invalid certificates
     apt-get update && \
     apt-get install -yqq --no-install-recommends curl ca-certificates && \
@@ -51,12 +49,12 @@ COPY --from=monolith-builder /usr/local/cargo/bin/monolith /usr/local/bin/monoli
 
 RUN set -eux && \
     apt-get clean && \
-    yarn cache clean
+    pnpm store prune || true
 
 COPY . .
 
-RUN yarn prisma:generate && \
-    yarn web:build && \
+RUN pnpm run prisma:generate && \
+    pnpm run web:build && \
     rm -rf apps/web/.next/cache
 
 HEALTHCHECK --interval=30s \
@@ -67,4 +65,4 @@ HEALTHCHECK --interval=30s \
 
 EXPOSE 3000
 
-CMD ["sh", "-c", "yarn prisma:deploy && yarn concurrently:start"]
+CMD ["sh", "-c", "pnpm run prisma:deploy && pnpm run concurrently:start"]

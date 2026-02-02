@@ -61,17 +61,16 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Use Node.js and Enable Yarn 4
+      - name: Use Node.js and Enable pnpm
         uses: actions/setup-node@v4
         with:
           node-version: "20"
 
-      - name: Enable Yarn 4
+      - name: Enable pnpm
         run: |
-          sudo rm -f /usr/bin/yarn /usr/bin/yarnpkg || true
           corepack enable
-          corepack prepare yarn@4.12.0 --activate
-          yarn --version
+          corepack prepare pnpm@8.10.0 --activate
+          pnpm --version
           
       - name: Initialize PostgreSQL
         run: |
@@ -80,7 +79,7 @@ jobs:
           psql -h localhost -U postgres -d postgres -c "CREATE DATABASE ${{ env.TEST_POSTGRES_DATABASE }} OWNER ${{ env.TEST_POSTGRES_USER }};"
 
       - name: Install packages
-        run: yarn install --immutable
+        run: pnpm install --frozen-lockfile
 
       - name: Cache playwright dependencies
         uses: awalsh128/cache-apt-pkgs-action@latest
@@ -121,21 +120,21 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/.cache/
-          key: ${{ runner.os }}-playwright-${{ hashFiles('**/yarn.lock') }}
+          key: ${{ runner.os }}-playwright-${{ hashFiles('**/pnpm-lock.yaml') }}
           restore-keys: |
             ${{ runner.os }}-playwright-
 
       - name: Setup project
         run: |
-          yarn prisma:generate
-          yarn web:build
-          yarn prisma:deploy
+          pnpm run prisma:generate
+          pnpm run web:build
+          pnpm run prisma:deploy
 
       - name: Start linkwarden server and worker
-        run: yarn concurrently:start &
+        run: pnpm run concurrently:start &
 
       - name: Run Tests
-        run: yarn workspace @linkwarden/web playwright test --grep ${{ matrix.test_case }}
+        run: pnpm --filter @linkwarden/web exec playwright test --grep ${{ matrix.test_case }}
 
       - uses: actions/upload-artifact@v4
         if: always()
