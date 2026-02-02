@@ -20,8 +20,7 @@
     "prisma:dev": "dotenv -- pnpm --filter @linkwarden/prisma run dev",
     "prisma:generate": "pnpm --filter @linkwarden/prisma run generate",
     "prisma:studio": "pnpm --filter @linkwarden/prisma run studio",
-    "format": "pnpm -w -r run format",
-    "postinstall": "pnpm --filter @linkwarden/web run postinstall && patch-package"
+    "format": "pnpm -w -r run format"
   },
   "resolutions": {
     "@types/react": "18.3.1",
